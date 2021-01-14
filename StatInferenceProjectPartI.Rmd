@@ -1,0 +1,254 @@
+---
+title: "Stat Inference Project Part I"
+author: "Jillian Katz"
+date: "12/28/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## J. Katz
+
+## Part 1: Comparing Exponential and Normal Distributions
+
+### Overview: 
+While exponential and normal distributions are quite different, here I will show how averages of samples from exponential distributions follow Normal distributions, as explained by the Central Limit Theorem.
+
+### Simulations:
+I produced two simulated datasets.  The first, "D1", is a dataset of 1000 samples from an exponential distribution with lambda = 0.2.  For the second,"D2", I produce a dataset of 40,000 samples from the same exponential distribution.  This second set is arranged into 1000 samples of 40. I did further assessment of the thousand averages of 40.
+
+```{r, echo = F, results = 'hide', warning=FALSE, message=FALSE}
+# Libraries
+library(ggplot2)
+library(dplyr)
+library(cowplot)
+library(tidyr)
+
+# Simulations 
+lambda = rate = 0.2
+Tmean = 1/lambda
+D1 <- data.frame(rexp(n = 1000, rate = 0.2))
+Smean1 = round(mean(D1[,]),3)
+
+D2 <- data.frame(matrix(rexp(40000, .2),1000,40))
+aves <- apply(D2, 1, mean)
+Smean2 =round(mean(aves),3)
+```
+```{r, echo=F, results = 'hide'}
+# Data Exploration and Visualization
+
+clrs = c("Theoretical" = "blue","Simulated"  = "red")
+
+hist1 <- ggplot(gather(D1), aes(x=value)) +
+  geom_histogram(bins = 30) + 
+  geom_vline(aes(xintercept = Tmean, color = "Theoretical"), size =.8, linetype = "dashed", show.legend = T) + 
+  geom_vline(aes(xintercept = Smean1, color = "Simulated"), size =1, linetype = "dotted", show.legend = T)+
+  ggtitle("Exponential Distribution")+
+  scale_color_manual(name = "Means", values = clrs)+
+  geom_text(aes(x = Smean1 + 5, y = 130, label = paste("Sim:",Smean1)))
+
+
+hist2 <- ggplot(gather(data.frame(aves)), aes(x = value)) + 
+  geom_histogram(bins = 25) 
+
+shift2 <- NULL
+if (Smean2 < Tmean) {shift2 = -.7} else {shift2 = .7}
+
+hist2 = hist2 + geom_vline(aes(xintercept = Tmean,color = "Theoretical"), size=.8, linetype = "dashed", show.legend = T) +
+  geom_vline(aes(xintercept = Smean2, color = "Simulated"), size =1, linetype = "dotted", show.legend = T) + 
+  ggtitle("Averages of Exponential Samples") +
+  theme(legend.position = "right") + 
+    geom_text(aes(x = Smean2 + shift2, y = 30, 
+                  label = paste("Sim:",Smean2))) +
+  scale_color_manual(name = "Means", values = clrs)
+```
+Below are graphs showing the distrubtion, as well as theoretical and actual averages of the simulated datasets.
+
+We can see that the exponential distribution is heavier at lower values, and the averages of samples are approximately symmetric around the mean, and look much more like a Gaussian bell-shaped curve.
+```{r, echo = F}
+plot_grid(hist1, hist2, nrow = 2, ncol=1)
+```
+
+
+Now to compare the variances from both simulated datasets.  For an exponential distribution, the standard deviatation is the same as the mean (here, this is 5). The variance is its square, so our theoretical variance for the first data set is 25.  
+
+Below, I show the simulated values.  We can see that the exponential distribution's standard deviation and variance are close to the theoretical values.  The data of averages is much tighter around the mean.
+
+
+```{r, echo = F}
+var1 = round(var(D1[,]),3)
+var2 = round(var(aves),3)
+sd1 = round(sd(D1[,]),3)
+sd2 = round(sd(aves),3)
+spread <- data.frame("Simulated.Variance" = c(var1, var2), "Simulated.St.Dev" = c(sd1, sd2), row.names = c("Exponential", "Averages from Exponential"))
+spread
+```
+
+
+Here, we can see the range of values within one standard deviation from the simulated means.
+```{r, echo=F}
+m1 <- mean(D1[,])
+g1 <- gather(D1)
+# Create Column with value TRUE for elements within 1 st dev of simulated mean
+g1[3] <- (g1$value > (m1 - sd1)) & (g1$value < (m1 + sd1))
+
+hist3 <- ggplot(g1, aes(x=value, fill = V3)) +
+  geom_histogram(color = "black", bins = 30) + 
+  geom_vline(aes(xintercept = Tmean, color = "blue"), size =.8, linetype = "dashed", show.legend = F) + 
+  geom_vline(aes(xintercept = Smean1, color = "red"), size =1, linetype = "dotted", show.legend = F)+
+  ggtitle("Exponential Distribution: Within 1 SD of Mean")+
+  geom_segment(aes(x = Smean1 - sd1, y = 50, xend = Smean1 + sd1, yend = 50, color = "black"),  arrow = arrow(length = unit(0.1, "npc"), ends = "both"))+
+  scale_fill_manual(values = c("gray", "green"))+
+  theme(legend.position = "none")
+
+g <- gather(data.frame(aves))
+m2 <- mean(aves)
+
+# Create Column with value TRUE for elements within 1 st dev of simulated mean
+g[3] <- (g$value > m2 - sd2) & (g$value < m2 + sd2)
+
+hist4 <- ggplot(g, aes(x = value, fill = V3)) + 
+  geom_histogram(bins = 25, color = "black") +
+  scale_fill_manual(values = c("gray", "green"))
+
+hist4 = hist4 + 
+  geom_vline(aes(xintercept = Tmean,color = "blue"), size=.8, linetype = "dashed", show.legend = F) +
+  geom_vline(aes(xintercept = Smean2, color = "red"), size =1, linetype = "dotted", show.legend = F) + 
+  ggtitle("Averages of Exponential Samples: Within 1 SD of Mean") +
+  #theme(legend.position = "right") + 
+    geom_segment(aes(x = Smean2 - sd2, y = 20, xend = Smean2 + sd2, yend = 20, color = "black"), arrow = arrow(length = unit(0.1, "npc"), ends = "both")) +
+  theme(legend.position = "none")
+
+plot_grid(hist3, hist4, nrow = 2, ncol=1)
+```
+
+
+In a Normal distribution, 68% of the data lies within one standard deviation from the mean, 95% lies within two standard deviations, and 99.7% lies within three standard deviations.  Now, let's compare our two datasets to see how much they resemble the spread of Normal distributions.
+
+We can see that the exponential distribution has an even larger percent of data within one standard deviation, and our dataset of averages closes matches a Normal distribution. This suggests that large sets of averages from an exponential distribution can be modeled as a Normal distributions.
+
+```{r, echo = F}
+m1 <- mean(D1[,])
+D1.1SD <- mean(D1[,] > (m1 - sd1) & D1[,] < (m1+sd1))
+D1.2SD <- mean(D1[,] > (m1 - 2*sd1) & D1[,] < (m1+2*sd1))
+D1.3SD <- mean(D1[,] > (m1 - 3*sd1) & D1[,] < (m1+3*sd1))
+
+m2 <- mean(aves)
+D2.1SD <- mean(aves > (m2 - sd2) & aves < (m2+sd2))
+D2.2SD <- mean(aves > (m2 - 2*sd2) & aves < (m2 + 2*sd2))
+D2.3SD <- mean(aves > (m2 - 3*sd2) & aves < (m2+3*sd2))
+
+spread2 <- data.frame("Percent.1.SD" = c(D1.1SD, D2.1SD), "Percent.2.SD" = c(D1.2SD, D2.2SD), "Percent.3.SD" = c(D1.3SD, D2.3SD), row.names = c("Exponential", "Averages from Exponential"))
+spread2 <- spread2 * 100
+spread2
+```
+
+## Part 1 Code
+```{rr, echo = T, results = 'hide'}
+library(ggplot2)
+library(dplyr)
+library(cowplot)
+library(tidyr)
+
+# Simulations 
+lambda = rate = 0.2
+Tmean = 1/lambda
+D1 <- data.frame(rexp(n = 1000, rate = 0.2))
+Smean1 = round(mean(D1[,]),3)
+
+D2 <- data.frame(matrix(rexp(40000, .2),1000,40))
+aves <- apply(D2, 1, mean)
+Smean2 =round(mean(aves),3)
+
+# Data Exploration and Visualization
+
+clrs = c("Theoretical" = "blue","Simulated"  = "red")
+
+hist1 <- ggplot(gather(D1), aes(x=value)) +
+  geom_histogram(bins = 30) + 
+  geom_vline(aes(xintercept = Tmean, color = "Theoretical"), size =.8, linetype = "dashed", show.legend = T) + 
+  geom_vline(aes(xintercept = Smean1, color = "Simulated"), size =1, linetype = "dotted", show.legend = T)+
+  ggtitle("Exponential Distribution")+
+  scale_color_manual(name = "Means", values = clrs)+
+  geom_text(aes(x = Smean1 + 5, y = 130, label = paste("Sim:",Smean1)))
+
+
+hist2 <- ggplot(gather(data.frame(aves)), aes(x = value)) + 
+  geom_histogram(bins = 25) 
+
+shift2 <- NULL
+if (Smean2 < Tmean) {shift2 = -.7} else {shift2 = .7}
+
+hist2 = hist2 + geom_vline(aes(xintercept = Tmean,color = "Theoretical"), size=.8, linetype = "dashed", show.legend = T) +
+  geom_vline(aes(xintercept = Smean2, color = "Simulated"), size =1, linetype = "dotted", show.legend = T) + 
+  ggtitle("Averages of Exponential Samples") +
+  theme(legend.position = "right") + 
+    geom_text(aes(x = Smean2 + shift2, y = 30, 
+                  label = paste("Sim:",Smean2))) +
+  scale_color_manual(name = "Means", values = clrs)
+
+plot_grid(hist1, hist2, nrow = 2, ncol=1)
+
+# Compare Data Spreads
+var1 = round(var(D1[,]),3)
+var2 = round(var(aves),3)
+sd1 = round(sd(D1[,]),3)
+sd2 = round(sd(aves),3)
+spread <- data.frame("Simulated.Variance" = c(var1, var2), "Simulated.St.Dev" = c(sd1, sd2), row.names = c("Exponential", "Averages from Exponential"))
+spread
+
+## Visualize Spreads
+g1 <- gather(D1)
+m1 <- mean(D1[,])
+# Create Column with value TRUE for elements within 1 st dev of simulated mean
+g1[3] <- (g1$value > (m1 - sd1)) & (g1$value < (m1 + sd1))
+
+hist3 <- ggplot(g1, aes(x=value, fill = V3)) +
+  geom_histogram(color = "black", bins = 30) + 
+  geom_vline(aes(xintercept = Tmean, color = "blue"), size =.8, linetype = "dashed", show.legend = F) + 
+  geom_vline(aes(xintercept = Smean1, color = "red"), size =1, linetype = "dotted", show.legend = F)+
+  ggtitle("Exponential Distribution: Within 1 SD of Mean")+
+  geom_segment(aes(x = Smean1 - sd1, y = 50, xend = Smean1 + sd1, yend = 50, color = "black"),  arrow = arrow(length = unit(0.1, "npc"), ends = "both"))+
+  scale_fill_manual(values = c("gray", "green"))+
+  theme(legend.position = "none")
+
+g <- gather(data.frame(aves))
+m2 <- mean(aves)
+# Create Column with value TRUE for elements within 1 st dev of simulated mean
+g[3] <- (g$value > m2 - sd2) & (g$value < m2 + sd2)
+
+hist4 <- ggplot(g, aes(x = value, fill = V3)) + 
+  geom_histogram(bins = 25, color = "black") +
+  scale_fill_manual(values = c("gray", "green"))
+
+hist4 = hist4 + 
+  geom_vline(aes(xintercept = Tmean,color = "blue"), size=.8, linetype = "dashed", show.legend = F) +
+  geom_vline(aes(xintercept = Smean2, color = "red"), size =1, linetype = "dotted", show.legend = F) + 
+  ggtitle("Averages of Exponential Samples: Within 1 SD of Mean") +
+  #theme(legend.position = "right") + 
+    geom_segment(aes(x = Smean2 - sd2, y = 20, xend = Smean2 + sd2, yend = 20, color = "black"), arrow = arrow(length = unit(0.1, "npc"), ends = "both")) +
+  theme(legend.position = "none")
+
+plot_grid(hist3, hist4, nrow = 2, ncol=1)
+
+# Compare Spread to Normal
+m1 <- mean(D1[,])
+D1.1SD <- mean(D1[,] > (m1 - sd1) & D1[,] < (m1+sd1))
+D1.2SD <- mean(D1[,] > (m1 - 2*sd1) & D1[,] < (m1+2*sd1))
+D1.3SD <- mean(D1[,] > (m1 - 3*sd1) & D1[,] < (m1+3*sd1))
+
+m2 <- mean(aves)
+D2.1SD <- mean(aves > (m2 - sd2) & aves < (m2+sd2))
+D2.2SD <- mean(aves > (m2 - 2*sd2) & aves < (m2+2*sd2))
+D2.3SD <- mean(aves > (m2 - 3*sd2) & aves < (m2+3*sd2))
+
+spread2 <- data.frame("Percent.1.SD" = c(D1.1SD, D2.1SD), "Percent.2.SD" = c(D1.2SD, D2.2SD), "Percent.3.SD" = c(D1.3SD, D2.3SD), row.names = c("Exponential", "Averages from Exponential"))
+spread2 <- spread2 * 100
+spread2
+
+```

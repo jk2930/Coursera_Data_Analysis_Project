@@ -1,0 +1,159 @@
+---
+title: "Regression Project"
+author: "Jillian Katz"
+date: "1/5/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## J Katz
+
+## Coursera Regression Course Project
+
+### Introduction
+
+Here I used the Motor Trend Car Road Tests dataset to analyze if - or how much - difference in car miles per gallon (MPG) can be attributed to the type of transmission (automatic vs manual).
+
+### Analysis
+
+To begin the analysis, I compared automatic and manual transmission cars' MPG independent of other variables, and there is an apparent difference.  The average gas mileage for a Manual Transmission vehicle is about 24 mpg, compared to about 17 mpg for an Automatic.  A Student's T test verified that the data shows a difference in the transmission types with over 99% confidence.
+
+```{r, echo = F, results = 'hide'}
+library(ggplot2)
+library(dplyr)
+```
+
+```{r, echo = F}
+ggplot(data = mtcars, aes(x =am,y = mpg, group = am, 
+                          fill = factor(am, labels = 
+                                          c("Automatic", "Manual")))) +
+  geom_boxplot() + labs(fill = "Transmission") +
+  xlab("Transmission") + ylab("MPG")
+
+autompg <- filter(mtcars, am == 0)$mpg
+manmpg <- filter(mtcars, am == 1)$mpg
+t <-t.test(autompg, manmpg, alternative = "two.sided")
+paste("T Test P value:", round(t$p.value, 6))
+
+# t = -3.7671, df = 18.332, p-value = 0.001374
+```
+
+
+However, there may be a confounding influence from other variables in the data.  A linear model predicting MPG with all of the other variables[^1]  showed an expected increase in 2.8mpg if changing from Automatic to Manual transmission.  This value came with a p-value of 0.16, which is not necessarily significant.
+
+[^1]: Variables in the dataset: Miles per gallon, Number of cylinders, Displacement, Horsepower, Rear axle ratio, Weight, Quarter mile time, Engine shape, Transmission, Number of forward gears, & Number of carburetors
+
+I created additional models to find which variables truly have the strongest influence on MPG.  I landed on transmission, rear axle ratio, weight, and quarter mile time.  A linear model with these factors showed weight, quarter mile time, and transmission to be significant (p-values < 0.1).  Overall, this suggests that the difference between a Manual and Automatic transmission vehicle results in a gain of about 3 miles per gallon.  
+
+Notably, there is an opposite influence by weight: A  vehicle weight gain of 1000 lb suggests a loss of about 3mpg.  Automatic vehicles tend to be heavier as well. This correlation explains the difference between effect of transmission type when the model excludes weight. 
+
+While this model is not perfect, it does fit the data reasonably well.  The plot of the residuals shows a slight curve, but no major patterns.
+
+
+```{r, echo = F}
+fit5 <- lm(mpg ~ drat+ wt + qsec + am -1, data = mtcars)
+#summary(fit5)
+plot(fit5, 1)
+
+```
+
+
+### Summary
+The 1974 Motor Trend data suggests that manual transmission vehicles do get superior gas mileage compared to automatic transmission vehicles.  However, the difference is only about 3mpg - considering other factors in cars - compared to the difference of 7mpg - when not considering other variables.
+
+## Additional Plots
+
+```{r, echo=F, results = 'hide'}
+
+# wt vs mpg - auto cars are heavier
+ggplot(data = mtcars, aes(x = wt , y = mpg, color = factor(am, labels = 
+                                          c("Automatic", "Manual")))) +
+  geom_point() + labs(color = "Transmission") +
+  xlab("Weight") + ylab("MPG") + ggtitle("Automatic cars tend to be heavier")
+
+# cyl vs mpg - auto have more cylinders
+ggplot(data = mtcars, aes(x = cyl , y = mpg, color = factor(am, labels = 
+                                          c("Automatic", "Manual")))) +
+  geom_point() + labs(color = "Transmission") +
+  xlab("Cylinders") + ylab("MPG") + ggtitle("Fewer cylinders: better gas mileage and manual transmission.")
+# hp vs mpg - slight effect?
+ggplot(data = mtcars, aes(x = hp , y = mpg, color = factor(am, labels = 
+                                          c("Automatic", "Manual")))) +
+  geom_point() + labs(color = "Transmission") +
+  xlab("Horsepower") + ylab("MPG") + ggtitle("More manual cars have lower horsepower.")
+#qsec - clear difference in performance
+ggplot(data = mtcars, aes(x =qsec , y = mpg, color = factor(am, labels = 
+                                          c("Automatic", "Manual")))) +
+  geom_point() + labs(color = "Transmission")+
+  xlab("Quarter Mile Time") + ylab("MPG") + ggtitle("Automatic cars might accelerate slightly faster.")
+
+#rear axle ratio - clear difference in performance
+ggplot(data = mtcars, aes(x =drat , y = mpg, color = factor(am, labels = 
+                                          c("Automatic", "Manual")))) +
+  geom_point() + labs(color = "Transmission")+
+  xlab("Rear Axle Ratio") + ylab("MPG") + ggtitle("Manual cars tend to have higher rear axle ratios.")
+
+plot(fit5)
+```
+
+## The Code
+
+```{r, echo=T, results = 'hide'}
+library(ggplot2)
+library(dplyr)
+
+## t test mpg vs transmission
+autompg <- filter(mtcars, am == 0)$mpg
+mean(autompg) # 17.14737
+manmpg <- filter(mtcars, am == 1)$mpg
+mean(manmpg) # 24.39231
+t.test(autompg, manmpg, alternative = "two.sided")
+# t = -3.7671, df = 18.332, p-value = 0.001374
+
+
+fit <- lm(mpg ~. -1, data = mtcars)
+summary(fit) ##  p val = .2340, low effect of transmission when including all variables. smallest ps from wt and qsec
+plot(fit)# residuals vs fitted look OK- no patterns
+
+
+fit2 <- lm(mpg ~ wt + qsec + am -1, data = mtcars)
+summary(fit2) # all factors significant
+plot(fit2)
+
+fit3 <- lm(mpg ~ wt + am -1, data = mtcars) # does transmission matter if considering weight?
+summary(fit3) # yes
+plot(fit3)
+
+# fit for all with coeff > 1
+fit4 <- lm(mpg ~ drat+ wt + qsec + am + gear -1, data = mtcars)
+summary(fit4)#gear has very low coeff, p almost 1
+plot(fit4)
+
+# fit4 with gear removed
+fit5 <- lm(mpg ~ drat+ wt + qsec + am -1, data = mtcars)
+summary(fit5)
+plot(fit5)
+
+fit6 <- lm(mpg ~ drat + qsec + am -1, data = mtcars)
+summary(fit6) # effect of transmission without weight: about the same as the mean difference of automatic and manual
+plot(fit6)
+
+## Exploration of relationships
+# transmission vs mpg - manual (1) looks better
+ggplot(data = mtcars, aes(x = am , y = mpg, color = am)) + geom_point()
+
+# wt vs mpg - auto cars are heavier
+ggplot(data = mtcars, aes(x = wt , y = mpg, color = am)) + geom_point()
+
+# cyl vs mpg - auto have more cylinders
+ggplot(data = mtcars, aes(x = cyl , y = mpg, color = am)) + geom_point()
+# hp vs mpg - slight effect
+ggplot(data = mtcars, aes(x = hp , y = mpg, color = am)) + geom_point()
+#qsec
+ggplot(data = mtcars, aes(x =qsec , y = mpg, color = am)) + geom_point()
+
+
+```
