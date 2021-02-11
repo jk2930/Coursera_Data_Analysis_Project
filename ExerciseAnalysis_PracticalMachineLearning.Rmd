@@ -9,14 +9,24 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+# Intoduction
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+## Project for Coursera (Hopkins) Practical Machne Learning
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+### Jillian Katz
 
-```{r cars}
-summary(cars)
+The purpose of this project is to analyze accelerometer data to determine if fitness accelerometer wearers are performing set exercises correctly or incorrectly.  The study data set includes 6 participants performing exercises in 5 different incorrect & correct ways (classified as A, B, C, D, & E.
+
+Thank you to [Groupware](http://groupware.les.inf.puc-rio.br/har) for supplying this data! 
+
+### Note on Assignment:
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases. 
+
+
+```{r}
+library(readr)
+pml_training <- read_csv("C:/Users/jkjil/Downloads/pml-training.csv")
+View(pml_training)
 ```
 
 ## Including Plots
